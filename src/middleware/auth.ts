@@ -1,23 +1,34 @@
-// src/middleware/auth.ts
-import { Request, Response, NextFunction } from 'express';
-
-interface CustomRequest extends Request {
-  user?: any;
-}
 import jwt from 'jsonwebtoken';
+import { type NextFunction } from 'express';
+import { type Request, type Response } from 'express';
+import User from '../models/user.models';
+import dotenv from 'dotenv';
 
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    // res.status(401).json({ status: 'failed', message: 'No token provided' });
-    throw new Error('No token provided');
-  } 
+dotenv.config();
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-    (req as CustomRequest).user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ status: 'failed', message: 'Invalid token' });
-  }
+export const auth = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const authHeader = req.header('Authorization');
+        if (!authHeader) {
+            return res.status(401).send({ error: 'Authorization header is missing' });
+        }
+
+        const token = authHeader.replace('Bearer ', '');
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET is not defined in the environment variables');
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET) as { _id: string };
+        const user = await User.findOne({ _id: decoded._id, 'tokens.token': token });
+
+        if (!user) {
+            return res.status(401).send({ error: 'Invalid token or user not found' });
+        }
+
+        (req as any).token = token;
+        (req as any).user = user;
+        next();
+    } catch (error) {
+        res.status(401).send({ error: 'Please authenticate' });
+    }
 };

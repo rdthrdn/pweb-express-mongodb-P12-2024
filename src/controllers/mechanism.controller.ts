@@ -1,36 +1,62 @@
-// src/controllers/mechanism.controller.ts
-import type { Request, Response } from 'express';
-import MechanismService from '../services/mechanism.service';
+import { type NextFunction } from "express";
+import { type Request, type Response } from "express";
 
-export class MechanismController {
-  async borrowBook(req: Request, res: Response) {
-    try {
-      const { id: bookId } = req.params;
-      const qty = await MechanismService.borrowBook( bookId);
+import { mechanism } from "../services/mechanism.service";
 
-      if (qty !== null) {
-        res.status(200).json({ status: 'success', message: 'Successfully borrow book', data: { currentQty: qty } });
-      } else {
-        res.status(400).json({ status: 'failed', message: 'Book is out of stock or not found' });
-      }
-    } catch (error) {
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+export const mechanismcontroller = {
+    async borrow(req: Request, res: Response, next: NextFunction) {
+        try {
+            const book = await mechanism.borrow(req.params.id);
+            res.status(200).send({
+                status: "success",
+                message: "Book borrowed successfully",
+                data: book,
+            });
+        } catch (error) {
+            res.status(404).send({
+                status: "error",
+                message: (error as Error).message,
+            });
+        }
+    },
+
+    async returnBook(req: Request, res: Response, next: NextFunction) {
+        try {
+            const book = await mechanism.returnBook(req.params.id);
+            res.status(200).send({
+                status: "success",
+                message: "Book returned successfully",
+                data: book,
+            });
+        } catch (error) {
+            res.status(404).send({
+                status: "error",
+                message: (error as Error).message,
+            });
+        }
+    },
+
+    async healthCheck(req: Request, res: Response, next: NextFunction) {
+        const currentDate = new Date().toISOString().split('T')[0];
+        try {
+            res.status(200).send({
+                status: "success",
+                message: "Mechanism service is running",
+                data: {
+                    date: currentDate,
+                },
+                
+            });
+        } catch (error) {
+            res.status(500).send({
+                status: "error",
+                message: "Health check encountered an error",
+                data: {
+                    date: currentDate,
+                    error: error,
+                },
+            });
+        }
+        
     }
-  }
-
-  async returnBook(req: Request, res: Response) {
-    try {
-      const { id: bookId } = req.params;
-    //   const userId = req.user.id;
-      const qty = await MechanismService.returnBook(bookId);
-
-      if (qty !== null) {
-        res.status(200).json({ status: 'success', message: 'Successfully return book', data: { currentQty: qty } });
-      } else {
-        res.status(404).json({ status: 'failed', message: 'Book not found' });
-      }
-    } catch (error) {
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-  }
-}
+};

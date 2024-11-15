@@ -1,65 +1,92 @@
-import type { IBook } from '../models/book.model';
-import Book from '../models/book.model';
-import { isValidObjectId } from 'mongoose';
+import { Book } from "../models/book.model";
 
-export class BookService {
-    async addBook(bookData: Partial<IBook>): Promise<IBook> {
-        const book = new Book(bookData);
-        return await book.save();
-    }
-
-    async getAllBooks(): Promise<IBook[]> {
-        return await Book.find();
-    }
-
-    async getBookById(id: string): Promise<IBook | null> {
-        return await Book.findById(id);
-    }
-
-    async modifyBook(
-        id: string,
-        bookData: Partial<IBook>
-    ): Promise<IBook | null> {
-        try {
-            if (!isValidObjectId(id)) {
-                throw new Error(`Invalid book ID format: ${id}`);
-            }
-    
-            const updatedBook = await Book.findByIdAndUpdate(id, bookData, { new: true });
-            
-            if (!updatedBook) {
-                throw new Error(`Book with ID ${id} not found`);
-            }
-            
-            return updatedBook;
-        } catch (error) {
-            if (error instanceof Error) {
-                throw error;
-            }
-            throw new Error('Failed to update book');
-        }
-    }
-
-    async removeBook(id: string): Promise<IBook | null> {
-        try {
-            if (!isValidObjectId(id)) {
-                throw new Error(`Invalid book ID format: ${id}`);
-            }
-     
-            const deletedBook = await Book.findByIdAndDelete(id);
-            
-            if (!deletedBook) {
-                throw new Error(`Book with ID ${id} not found`);
-            }
-            
-            return deletedBook;
-        } catch (error) {
-            if (error instanceof Error) {
-                throw error;
-            }
-            throw new Error('Failed to delete book');
-        }
-     }
+interface newbook {
+    title: string;
+    author: string;
+    publishedDate: Date;
+    publisher: string;
+    description: string;
+    coverImage: string;
+    tags: string[];
+    initialQty: number;
+    qty: number;
+    rating: {
+        average: number;
+        count: number;
+    };
 }
 
-export default new BookService();
+interface updatebook {
+    title?: string;
+    author?: string;
+    publishedDate?: Date;
+    publisher?: string;
+    description?: string;
+    coverImage?: string;
+    tags?: string[];
+    initialQty?: number;
+    qty?: number;
+    rating?: {
+        average: number;
+        count: number;
+    };
+}
+
+export type { newbook, updatebook };
+
+export const bookservice = {
+    async getAllBooks() {
+        try {
+            return await Book.find();
+        } catch (error) {
+            console.error("Error fetching all books:", error);
+            throw new Error("Could not fetch books");
+        }
+    },
+
+    async getBookById(id: string) {
+        try {
+            const book = await Book.findById(id);
+            if (!book) throw new Error("Book not found");
+            return book;
+        } catch (error) {
+            console.error(`Error fetching book with id ${id}:`, error);
+            throw new Error("Could not fetch the specified book");
+        }
+    },
+
+    async deleteBookById(id: string) {
+        try {
+            const book = await Book.findByIdAndDelete(id);
+            if (!book) throw new Error("Book not found");
+            return book;
+        } catch (error) {
+            console.error(`Error deleting book with id ${id}:`, error);
+            throw new Error("Could not delete the specified book");
+        }
+    },
+
+    async createBook(newBook: newbook) {
+        try {
+            const book = await Book.create(newBook);
+            return book;
+        } catch (error) {
+            console.error("Error creating new book:", error);
+            throw new Error("Could not create book");
+        }
+    },
+
+    async updateBook(id: string, updateBook: updatebook) {
+        try {
+            const bookFound = await Book.findById(id);
+            if (!bookFound) throw new Error("Book not found");
+
+            Object.assign(bookFound, updateBook); // Update only provided fields
+            await bookFound.save();
+            return bookFound;
+        } catch (error) {
+            console.error(`Error updating book with id ${id}:`, error);
+            throw new Error("Could not update the specified book");
+        }
+    }
+};

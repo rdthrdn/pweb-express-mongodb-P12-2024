@@ -1,28 +1,28 @@
-import connectDB from "./db-connection";
-import bookrouter from "./routes/book.route";
-import authrouter from './routes/auth.route';
-import express, { type Express, type Request, type Response } from "express";
-import mechanismrouter from "./routes/mechanism.route";
+// index.ts
+import express from "express";
+import router from "./routes";
+import dbConnection from "./db-connection"; 
+
+
+dbConnection();
 
 const app = express();
-
+const port = process.env.PORT || 3000;
+const currentDate = new Date().toISOString().split('T')[0];
 app.use(express.json());
-connectDB();   
+app.use(router);
 
-app.get("/", (req: Request, res: Response) => {
-  const date = new Date();
-  const response = {
+app.get("/", (req, res) => {
+  res.status(200).send({
     status: "success",
     message: "Hello World",
-    date: date.toDateString(),
-  };  res.send(response);
+    data: {
+        date: currentDate,
+    },
+    
+  });
 });
 
-// Route untuk autentikasi
-app.use('/auth', authrouter);
-app.use("/mechanism", mechanismrouter);
-app.use("/book", bookrouter);
-const PORT = 4000;
-app.listen(PORT, () => {
-  console.log(`Express is running on Port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
 });

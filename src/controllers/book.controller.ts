@@ -1,100 +1,90 @@
-import type { Request, Response } from "express";
-import BookService from "../services/book.service";
+import { type NextFunction } from "express";
+import { type Request, type Response } from "express";
 
-export class BookController {
-	async addBook(req: Request, res: Response) {
-		try {
-			const { initialQty, qty } = req.body;
+import { bookservice } from "../services/book.service";
+import { type newbook } from "../services/book.service";
+import { type updatebook} from "../services/book.service";
+import { get } from "mongoose";
 
-			// Error handling qty
-			if (initialQty <= 0 || qty <= 0) {
-				return res.status(400).json({
-					status: "error",
-					message: "InitialQty and Qty should not be 0 or less",
-				});
-			}
+export const bookcontroller = {
+    async getAllBooks(req: Request, res: Response, next: NextFunction) {
+        try {
+            const books = await bookservice.getAllBooks();
+            res.status(200).send({
+                status: "success",
+                message: "Books fetched successfully",
+                data: books,
+            });
+        } catch (error) {
+            res.status(500).send({
+                status: "error",
+                message: "Could not fetch books",
+            });
+        }
+    },
 
-			if (qty > initialQty) {
-				return res.status(400).json({
-					status: "error",
-					message: "Qty should not be more than InitialQty",
-				});
-			}
+    async getBookById(req: Request, res: Response, next: NextFunction) {
+        try {
+            const book = await bookservice.getBookById(req.params.id);
+            res.status(200).send({
+                status: "success",
+                message: "Book fetched successfully",
+                data: book,
+            });
+        } catch (error) {
+            res.status(404).send({
+                status: "error",
+                message: (error as Error).message,
+            });
+        }
+    },
 
-			const book = await BookService.addBook(req.body);
+    async addBook(req: Request, res: Response, next: NextFunction) {
+        try {
+            const book = await bookservice.createBook(req.body as newbook);
+            res.status(201).send({
+                status: "success",
+                message: "Book added successfully",
+                data: book,
+            });
+        } catch (error) {
+            res.status(400).send({
+                status: "error",
+                message: (error as Error).message,
+            });
+        }
+    },
 
-			// res.status(201).json(book);
+    async updateBook(req: Request, res: Response, next: NextFunction) {
+        try {
+            const book = await bookservice.updateBook(req.params.id, req.body as updatebook);
+            res.status(200).send({
+                status: "success",
+                message: "Book updated successfully",
+                data: book,
+            });
+        } catch (error) {
+            res.status(400).send({
+                status: "error",
+                message: (error as Error).message,
+            });
+        }
+    },
 
-			// response format
-			res.status(201).json({ status: "success", message: "Successfully add book", data: book });
-		} catch (error) {
-			if (error instanceof Error) {
-				res.status(400).json({ status: "failed", message: error.message });
-			} else {
-				res.status(400).json({ status: "error", message: "Unknown error" });
-			}
-		}
-	}
+    async deleteBookById(req: Request, res: Response, next: NextFunction) {
+        try {
+            const book = await bookservice.deleteBookById(req.params.id);
+            res.status(200).send({
+                status: "success",
+                message: "Book deleted successfully",
+                data: book,
+            });
+        } catch (error) {
+            res.status(404).send({
+                status: "error",
+                message: (error as Error).message,
+            });
+        }
+    }
+};
 
-	async getAllBooks(req: Request, res: Response) {
-		try {
-			const books = await BookService.getAllBooks();
-			res.status(201).json({ status: "success", message: "Successfully get all books", data: books });
-		} catch (error: any) {
-			if (error instanceof Error) {
-				res.status(400).json({ status: "failed", message: error.message });
-			} else {
-				res.status(400).json({ status: "error", message: "Unknown error" });
-			}
-		}
-	}
-
-	async getBookById(req: Request, res: Response) {
-		try {
-			const book = await BookService.getBookById(req.params.id);
-			if (!book) {
-				res.status(404).json({ message: "Book not found" });
-				return;
-			}
-
-			res.status(201).json({ status: "success", message: "Successfully get book by ID", data: book });
-		} catch (error) {
-			if (error instanceof Error) {
-				res.status(500).json({ status: "failed", message: error.message });
-			} else {
-				res.status(500).json({ status: "error", message: "Unknown error" });
-			}
-		}
-	}
-
-	async modifyBook(req: Request, res: Response) {
-		try {
-			const book = await BookService.modifyBook(req.params.id, req.body);
-
-			res.status(201).json({ status: "success", message: "Successfully modify book by ID", data: book });
-		} catch (error) {
-			if (error instanceof Error && error.message.includes("Invalid book ID format")) {
-				res.status(400).json({ status: "failed", message: error.message });
-			} else if (error instanceof Error && error.message.includes("not found")) {
-				res.status(404).json({ status: "failed", message: error.message });
-			} else {
-				res.status(500).json({ status: "error", message: "Internal server error" });
-			}
-		}
-	}
-
-	async removeBook(req: Request, res: Response) {
-		try {
-			const book = await BookService.removeBook(req.params.id);
-			res.json({ status: "success", message: "Book deleted successfully" });
-		} catch (error) {
-			if (error instanceof Error && error.message.includes("Invalid book ID format")) {
-				res.status(400).json({ status: "failed", message: error.message });
-			} else if (error instanceof Error && error.message.includes("not found")) {
-				res.status(404).json({ status: "failed", message: error.message });
-			} else {
-				res.status(500).json({ status: "error", message: "Internal server error" });
-			}
-		}
-	}
-}

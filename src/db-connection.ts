@@ -1,22 +1,17 @@
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
+// db-connection.ts
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const DATABASE_URI = process.env.DATABASE_URI;
+const dbConnection = async () => {
+    const url = process.env.MONGO_URL || "";
+    try {
+        await mongoose.connect(url);
+        console.log("Database connected successfully");
+    } catch (error) {
+        console.log("Database connection failed", error);
+    }
+};
 
-if (!DATABASE_URI) {
-  throw new Error('Please define the DATABASE_URI environment variable');
-}
-
-async function connectDB() {
-  try {
-    await mongoose.connect(DATABASE_URI as string,{connectTimeoutMS: 60000});
-    console.log('MongoDB connected successfully');
-  } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-    process.exit(1);
-  }
-}
-
-export default connectDB;
+export default dbConnection;

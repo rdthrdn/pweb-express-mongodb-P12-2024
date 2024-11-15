@@ -1,31 +1,67 @@
-// src/controllers/auth.controller.ts
-import type { Request, Response } from "express";
-import AuthService from "../services/auth.service";
+import { type NextFunction } from "express";
+import { type Request, type Response } from "express";
+import { auth } from "../services/auth.service";
+import { type newUser, type login } from "../services/auth.service";
 
-export class AuthController {
-	async register(req: Request, res: Response) {
-		try {
-			const { username, password, email } = req.body;
-			const user = await AuthService.register(username, password, email);
-			res.status(201).json({ status: "success", message: "User registered successfully", data: user });
-		} catch (error) {
-			res.status(400).json({ status: "failed", message: "Registration failed" });
-		}
-	}
+export const authcontroller = {
+    async register(req: Request, res: Response, next: NextFunction) {
+        try {
+            const user = await auth.register(req.body as newUser);
+            res.status(201).send({
+                status: "success",
+                message: "User registered successfully",
+                data: {
+                    user: {
+                        username: user.username,
+                        _id: user._id,
+                    },
+                },
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
 
-	async login(req: Request, res: Response) {
-		try {
-			const { username, password, email } = req.body;
-			const userData = await AuthService.login(username, password, email);
-			if (userData.error === "User not found") {
-				res.status(404).json({ status: "failed", message: "User not registered" });
-			} else if (userData.error === "Invalid password") {
-				res.status(401).json({ status: "failed", message: "Invalid credentials" });
-			} else {
-				res.status(200).json({ status: "success", message: "Login successful", data: userData });
-			}
-		} catch (error) {
-			res.status(500).json({ status: "error", message: "Invalid credentials" });
-		}
-	}
-}
+    async login(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { username, password } = req.body as login;
+            const { user, token } = await auth.login({ username, password });
+            res.status(200).send({
+                status: "success",
+                message: "User logged in successfully",
+                data: {
+                    user: {
+                        username: user.username,
+                        _id: user._id,
+                    },
+                    token,
+                },
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    async healthCheck(req: Request, res: Response, next: NextFunction) {
+        const currentDate = new Date().toISOString().split('T')[0];
+        try {
+            res.status(200).send({
+                status: "success",
+                message: "Auth service is running",
+                data: {
+                    date: currentDate,
+                },
+                
+            });
+        } catch (error) {
+            res.status(500).send({
+                status: "error",
+                message: "Health check encountered an error",
+                data: {
+                    date: currentDate,
+                    error: error,
+                },
+            });
+        }
+    }
+};

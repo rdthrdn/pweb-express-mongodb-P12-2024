@@ -1,44 +1,57 @@
-// src/services/auth.service.ts
-import jwt from "jsonwebtoken";
-import User, { IUser } from "../models/user.model";
+import { userInterface } from "../models/user.models";
+import bcrypt from "bcrypt";
+import  User  from "../models/user.models";
 
-export class AuthService {
-	async getUser(username: string): Promise<{ username: string; email: string }> {
-		throw new Error("Method not implemented.");
-	}
-	async register(username: string, password: string, email: any) {
-		const newUser = new User({ username, password, email });
-		await newUser.save();
-		return { id: newUser._id, username: newUser.username, email: newUser.email };
-	}
-
-	async login(username: string, password: string, email: string): Promise<any | null> {
-		let userFound;
-		if (!username) {
-			userFound = await User.findOne({ email });
-		} else if (!email) {
-			userFound = await User.findOne({ username });
-		} else {
-			userFound = await User.findOne({ username, email });
-		}
-
-		// const user = await User.findOne({ username,email });
-		if (userFound && (await userFound.comparePassword(password))) {
-			return {
-				user: {
-					username: userFound.username,
-					email: userFound.email,
-				},
-				token: jwt.sign({ id: userFound._id, username: userFound.username }, process.env.JWT_SECRET as string, {
-					expiresIn: "1h",
-				}),
-			};
-		} else if (!userFound) {
-			return { error: "User not found" };
-		} else {
-			return { error: "Invalid password" };
-		}
-	}
+interface newUser {
+    username: string;
+    password: string;
 }
 
-export default new AuthService();
+interface login {
+    username: string;
+    password: string;
+}
+
+export type { newUser, login };
+
+export const auth = {
+    async register({ username, password }: newUser) {
+        try {
+            
+            if (!User.db) throw new Error("Database connection error");
+
+            
+            const user = new User({ username, password });
+            await user.save();
+
+            
+            const token = await user.generateAuthToken();
+            return user;
+        } catch (error) {
+            console.error("Error registering user:", (error as Error).message || error);
+            throw new Error("Could not register user. Please try again.");
+        }
+    },
+
+    async login({ username, password }: login) {
+        try {
+            
+            if (!User.db) throw new Error("Database connection error");
+
+            
+            const user = await User.findOne({ username });
+            if (!user) throw new Error("User not found");
+
+            
+            const isValidPassword = await bcrypt.compare(password, user.password);
+            if (!isValidPassword) throw new Error("Invalid password");
+
+           
+            const token = await user.generateAuthToken();
+            return { token, user: user.toJSON() };
+        } catch (error) {
+            console.error("Error logging in user:", (error as Error).message || error);
+            throw new Error("Could not log in user. Please try again.");
+        }
+    },
+};
